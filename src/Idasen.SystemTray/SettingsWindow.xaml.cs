@@ -1,11 +1,11 @@
-﻿using System ;
-using System.Threading.Tasks ;
-using System.Windows.Input ;
-using Idasen.BluetoothLE.Core ;
-using Idasen.SystemTray.Interfaces ;
-using Idasen.SystemTray.Utils ;
-using JetBrains.Annotations ;
-using Serilog ;
+﻿using Idasen.BluetoothLE.Core;
+using Idasen.SystemTray.Interfaces;
+using Idasen.SystemTray.Utils;
+using Serilog;
+using System;
+using System.Threading.Tasks;
+using System.Windows;
+using System.Windows.Input;
 
 namespace Idasen.SystemTray
 {
@@ -15,158 +15,147 @@ namespace Idasen.SystemTray
     public partial class SettingsWindow
         : ISettingsWindow
     {
-        public SettingsWindow (
-            [ NotNull ] ILogger          logger ,
-            [ NotNull ] ISettingsManager manager ,
-            [ NotNull ] IVersionProvider provider )
+        public SettingsWindow(
+            ILogger logger,
+            ISettingsManager manager,
+            IVersionProvider provider)
         {
-            Guard.ArgumentNotNull ( logger ,
-                                    nameof ( logger ) ) ;
-            Guard.ArgumentNotNull ( manager ,
-                                    nameof ( manager ) ) ;
-            Guard.ArgumentNotNull ( provider ,
-                                    nameof ( provider ) ) ;
+            Guard.ArgumentNotNull(logger, nameof(logger));
+            Guard.ArgumentNotNull(manager, nameof(manager));
+            Guard.ArgumentNotNull(provider, nameof(provider));
 
-            _logger  = logger ;
-            _manager = manager ;
+            _logger = logger;
+            _manager = manager;
 
-            InitializeComponent ( ) ;
+            InitializeComponent();
 
-            LabelVersion.Content = provider.GetVersion ( ) ;
+            this.Title = $"Idasen Desk Settings ({provider.GetVersion()})";
 
-            Task.Run ( Initialize ) ;
+            _ = Task.Run(Initialize);
         }
 
         public event EventHandler AdvancedSettingsChanged;
         public event EventHandler<LockSettingsChangedEventArgs> LockSettingsChanged;
 
-        private async void Initialize ( )
+        private async void Initialize()
         {
             try
             {
-                await _manager.Load ( ) ;
+                await _manager.Load();
 
-                Update ( _manager.CurrentSettings ) ;
+                Update(_manager.CurrentSettings);
             }
-            catch ( Exception e )
+            catch (Exception e)
             {
-                _logger.Error ( e ,
-                                "Failed to initialize" ) ;
+                _logger.Error(e, "Failed to initialize");
             }
         }
 
-        private void ImageClose_MouseDown ( object               sender ,
-                                            MouseButtonEventArgs e )
+        private void ImageClose_MouseDown(object sender, MouseButtonEventArgs e)
         {
-            _logger.Debug ( $"Closing {GetType ( ).Name}..." ) ;
+            _logger.Debug($"Closing {GetType().Name}...");
 
-            Close ( ) ;
+            Close();
         }
 
-        private void StoreSettings ( )
+        private void StoreSettings()
         {
-            if ( _storingSettingsTask?.Status == TaskStatus.Running )
+            if (_storingSettingsTask?.Status == TaskStatus.Running)
             {
-                _logger.Warning ( "Storing Settings already in progress" );
+                _logger.Warning("Storing Settings already in progress");
 
                 return;
             }
 
-            var settings = _manager.CurrentSettings ;
+            ISettings settings = _manager.CurrentSettings;
 
-            var newDeviceName    = _nameConverter.DefaultIfEmpty ( DeskName.Text ) ;
-            var newDeviceAddress = _addressConverter.DefaultIfEmpty ( DeskAddress.Text ) ;
-            var newDeviceLocked  = Locked.IsChecked ?? false ;
+            string newDeviceName = _nameConverter.DefaultIfEmpty(DeskName.Text);
+            ulong newDeviceAddress = _addressConverter.DefaultIfEmpty(DeskAddress.Text);
+            bool newDeviceLocked = Locked.IsChecked ?? false;
 
-            var advancedChanged = settings.DeviceName    != newDeviceName    ||
-                                  settings.DeviceAddress != newDeviceAddress ;
+            bool advancedChanged = settings.DeviceName != newDeviceName ||
+                                  settings.DeviceAddress != newDeviceAddress;
 
-            var lockChanged = settings.DeviceLocked != newDeviceLocked ;
+            bool lockChanged = settings.DeviceLocked != newDeviceLocked;
 
-            settings.StandingHeightInCm = _doubleConverter.ConvertToUInt ( Standing.Value ,
-                                                                           Constants.DefaultHeightStandingInCm ) ;
-            settings.SeatingHeightInCm = _doubleConverter.ConvertToUInt ( Seating.Value ,
-                                                                          Constants.DefaultHeightSeatingInCm ) ;
-            settings.DeviceName    = newDeviceName ;
-            settings.DeviceAddress = newDeviceAddress ;
-            settings.DeviceLocked  = newDeviceLocked ;
+            settings.StandingHeightInCm = _doubleConverter.ConvertToUInt(Standing.Value,
+                                                                           Constants.DefaultHeightStandingInCm);
+            settings.SeatingHeightInCm = _doubleConverter.ConvertToUInt(Seating.Value,
+                                                                          Constants.DefaultHeightSeatingInCm);
+            settings.DeviceName = newDeviceName;
+            settings.DeviceAddress = newDeviceAddress;
+            settings.DeviceLocked = newDeviceLocked;
 
-            _storingSettingsTask = Task.Run ( async ( ) =>
+            _storingSettingsTask = Task.Run(async () =>
                                               {
-                                                  await DoStoreSettings ( settings ,
+                                                  await DoStoreSettings(settings,
                                                                           advancedChanged,
-                                                                          lockChanged) ;
-                                              } ) ;
+                                                                          lockChanged);
+                                              });
         }
 
-        private async Task DoStoreSettings ( ISettings settings ,
-                                             bool      advancedChanged,
-                                             bool lockChanged)
+        private async Task DoStoreSettings(ISettings settings, bool advancedChanged, bool lockChanged)
         {
             try
             {
-                _logger.Debug ( $"Storing new settings: {settings}" ) ;
+                _logger.Debug($"Storing new settings: {settings}");
 
-                await _manager.Save ( ) ;
+                await _manager.Save();
 
-                if ( advancedChanged )
+                if (advancedChanged)
                 {
-                    _logger.Information ( "Advanced settings have changed, reconnecting..." ) ;
+                    _logger.Information("Advanced settings have changed, reconnecting...");
 
-                    AdvancedSettingsChanged?.Invoke ( this ,
-                                                      EventArgs.Empty ) ;
+                    AdvancedSettingsChanged?.Invoke(this, EventArgs.Empty);
                 }
 
-                if ( lockChanged )
+                if (lockChanged)
                 {
                     _logger.Information("Advanced Locked settings have changed...");
 
-                    LockSettingsChanged?.Invoke(this,
-                                                new LockSettingsChangedEventArgs(settings.DeviceLocked));
+                    LockSettingsChanged?.Invoke(this, new LockSettingsChangedEventArgs(settings.DeviceLocked));
                 }
             }
-            catch ( Exception e )
+            catch (Exception e)
             {
-                _logger.Error ( e ,
-                                "Failed to store settings" ) ;
+                _logger.Error(e, "Failed to store settings");
             }
         }
 
-        private void SettingsWindow_OnClosed ( object    sender ,
-                                               EventArgs e )
+        private void SettingsWindow_OnClosed(object sender, EventArgs e)
         {
-            _logger.Debug ( "Handling 'Closed' event" ) ;
+            _logger.Debug("Handling 'Closed' event");
 
-            StoreSettings ( ) ;
+            StoreSettings();
         }
 
-        private void Update ( ISettings settings )
+        private void Update(ISettings settings)
         {
-            if ( ! Dispatcher.CheckAccess ( ) )
+            if (!Dispatcher.CheckAccess())
             {
-                Dispatcher.BeginInvoke ( new Action ( ( ) => Update ( settings ) ) ) ;
+                _ = Dispatcher.BeginInvoke(new Action(() => Update(settings)));
 
-                return ;
+                return;
             }
 
             _logger.Debug($"Update settings: {settings}");
 
-            Standing.Value   = settings.StandingHeightInCm ;
+            Standing.Value = settings.StandingHeightInCm;
             Standing.Minimum = settings.DeskMinHeightInCm;
             Standing.Maximum = settings.DeskMaxHeightInCm;
-            Seating.Value    = settings.SeatingHeightInCm ;
-            Seating.Minimum  = settings.DeskMinHeightInCm;
-            Seating.Maximum  = settings.DeskMaxHeightInCm;
-            DeskName.Text    = _nameConverter.EmptyIfDefault ( settings.DeviceName ) ;
-            DeskAddress.Text = _addressConverter.EmptyIfDefault ( settings.DeviceAddress ) ;
-            Locked.IsChecked = settings.DeviceLocked ;
+            Seating.Value = settings.SeatingHeightInCm;
+            Seating.Minimum = settings.DeskMinHeightInCm;
+            Seating.Maximum = settings.DeskMaxHeightInCm;
+            DeskName.Text = _nameConverter.EmptyIfDefault(settings.DeviceName);
+            DeskAddress.Text = _addressConverter.EmptyIfDefault(settings.DeviceAddress);
+            Locked.IsChecked = settings.DeviceLocked;
         }
 
-        private readonly IDoubleToUIntConverter         _doubleConverter  = new DoubleToUIntConverter ( ) ;
-        private readonly IDeviceNameConverter           _nameConverter    = new DeviceNameConverter ( ) ;
-        private readonly IDeviceAddressToULongConverter _addressConverter = new DeviceAddressToULongConverter ( ) ;
-        private readonly ILogger                        _logger ;
-        private readonly ISettingsManager               _manager ;
-        private          Task                           _storingSettingsTask ;
+        private readonly IDoubleToUIntConverter _doubleConverter = new DoubleToUIntConverter();
+        private readonly IDeviceNameConverter _nameConverter = new DeviceNameConverter();
+        private readonly IDeviceAddressToULongConverter _addressConverter = new DeviceAddressToULongConverter();
+        private readonly ILogger _logger;
+        private readonly ISettingsManager _manager;
+        private Task _storingSettingsTask;
     }
 }

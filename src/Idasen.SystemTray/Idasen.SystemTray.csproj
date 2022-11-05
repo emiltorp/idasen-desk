@@ -8,18 +8,17 @@
     <AssemblyVersion>0.0.168.0</AssemblyVersion>
     <FileVersion>0.0.168.0</FileVersion>
     <Version>0.0.168</Version>
-    <PublishSingleFile>true</PublishSingleFile>
-    <SelfContained>true</SelfContained>
+	<PublishSingleFile Condition="'$(Configuration)' == 'Release'">true</PublishSingleFile>
+	<SelfContained>true</SelfContained>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <PublishReadyToRun>true</PublishReadyToRun>
     <IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
+    <Product>Idasen Desk Control</Product>
+	<Title>Idasen Desk Control</Title>
+    <StartupObject></StartupObject>
   </PropertyGroup>
 
   <ItemGroup>
-    <None Remove="Images\bulb-green.png" />
-    <None Remove="Images\bulb-red.png" />
-    <None Remove="Images\bulb-yellow.png" />
-    <None Remove="Images\close-window-xxl.png" />
     <None Remove="Images\cup-xl-16x16.ico" />
     <None Remove="Images\cup-xl.ico" />
     <None Remove="Images\cup-xl.png" />
@@ -35,16 +34,12 @@
   <ItemGroup>
     <PackageReference Include="Hardcodet.Wpf.TaskbarNotification.Core" Version="2.0.0" />
     <PackageReference Include="Idasen.Desk.Core" Version="0.0.47" />
-    <PackageReference Include="JetBrains.Annotations" Version="2022.1.0" />
+    <PackageReference Include="Microsoft.Toolkit.Uwp.Notifications" Version="7.1.3" />
     <PackageReference Include="NHotkey.Wpf" Version="2.1.0" />
     <PackageReference Include="System.Reactive" Version="5.0.0" />
   </ItemGroup>
 
   <ItemGroup>
-    <Resource Include="Images\bulb-green.png" />
-    <Resource Include="Images\bulb-red.png" />
-    <Resource Include="Images\bulb-yellow.png" />
-    <Resource Include="Images\close-window-xxl.png" />
     <Resource Include="Images\cup-xl.ico" />
   </ItemGroup>
 

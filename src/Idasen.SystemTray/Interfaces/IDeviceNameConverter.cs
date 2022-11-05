@@ -2,7 +2,7 @@
 {
     public interface IDeviceNameConverter
     {
-        string DefaultIfEmpty ( string deviceName ) ;
-        string EmptyIfDefault ( string deviceName ) ;
+        string DefaultIfEmpty(string deviceName);
+        string EmptyIfDefault(string deviceName);
     }
 }

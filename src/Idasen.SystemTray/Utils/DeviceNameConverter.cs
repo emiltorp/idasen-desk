@@ -1,4 +1,4 @@
-﻿using Idasen.SystemTray.Interfaces ;
+﻿using Idasen.SystemTray.Interfaces;
 
 namespace Idasen.SystemTray.Utils
 {

@@ -1,9 +1,9 @@
-﻿using System.Windows ;
+﻿using System.Windows;
 
 namespace Idasen.SystemTray.Interfaces
 {
     public interface ITaskbarIconProviderFactory
     {
-        ITaskbarIconProvider Create ( Application application ) ;
+        ITaskbarIconProvider Create(Application application);
     }
 }

@@ -1,86 +1,63 @@
-﻿using System ;
-using System.Drawing ;
-using Hardcodet.Wpf.TaskbarNotification ;
-using Idasen.BluetoothLE.Core ;
-using JetBrains.Annotations ;
+﻿using Hardcodet.Wpf.TaskbarNotification;
+using Idasen.BluetoothLE.Core;
+using System;
+using System.Drawing;
 
 namespace Idasen.SystemTray
 {
     public class DynamicIconCreator : IDynamicIconCreator
     {
-        public void Update ( [ NotNull ] TaskbarIcon taskbarIcon ,
-                             int                     height )
+        public void Update(TaskbarIcon taskbarIcon, int height)
         {
-            Guard.ArgumentNotNull ( taskbarIcon ,
-                                    nameof ( taskbarIcon ) ) ;
+            Guard.ArgumentNotNull(taskbarIcon,
+                                    nameof(taskbarIcon));
 
-            PushIcons ( taskbarIcon ,
-                        CreateIcon ( height ) ,
-                        height ) ;
+            PushIcons(taskbarIcon, CreateIcon(height), height);
         }
 
-        private Icon CreateIcon ( int height )
+        private Icon CreateIcon(int height)
         {
-            var width = height >= 100
-                            ? 24
-                            : 16 ;
+            int width = height >= 100 ? 24 : 16;
 
-            using var pen   = new Pen ( _brushDarkBlue ) ;
-            using var brush = new SolidBrush ( _brushLightBlue ) ;
-            using var font = new Font ( "Consolas" ,
-                                        8 ) ;
+            using Pen pen = new(_brushDarkBlue);
+            using SolidBrush brush = new(_brushLightBlue);
+            using Font font = new("Consolas", 8);
 
-            using var bitmap = new Bitmap ( width ,
-                                            16 ) ;
+            using Bitmap bitmap = new(width, 16);
 
-            using var graph = Graphics.FromImage ( bitmap ) ;
+            using Graphics graph = Graphics.FromImage(bitmap);
 
             //draw two horizontal lines
-            graph.DrawLine ( pen ,
-                             0 ,
-                             15 ,
-                             width ,
-                             15 ) ;
-            graph.DrawLine ( pen ,
-                             0 ,
-                             0 ,
-                             width ,
-                             0 ) ;
+            graph.DrawLine(pen, 0, 15, width, 15);
+            graph.DrawLine(pen, 0, 0, width, 0);
 
             //draw the string including the value at origin
-            graph.DrawString ( $"{height}" ,
-                               font ,
-                               brush ,
-                               new PointF ( - 1 ,
-                                            1 ) ) ;
+            graph.DrawString($"{height}", font, brush, new PointF(-1, 1));
 
-
-            var icon = bitmap.GetHicon ( ) ;
+            IntPtr icon = bitmap.GetHicon();
 
             //create a new icon from the handle
-            return Icon.FromHandle ( icon ) ;
+            return Icon.FromHandle(icon);
         }
 
-        private void PushIcons ( TaskbarIcon taskbarIcon ,
-                                 Icon        icon ,
-                                 int         value )
+        private void PushIcons(TaskbarIcon taskbarIcon, Icon icon, int value)
         {
-            if ( ! taskbarIcon.Dispatcher.CheckAccess ( ) )
+            if (!taskbarIcon.Dispatcher.CheckAccess())
             {
-                taskbarIcon.Dispatcher
-                           .BeginInvoke ( new Action ( ( ) => PushIcons ( taskbarIcon ,
-                                                                          icon ,
-                                                                          value ) ) ) ;
+                _ = taskbarIcon.Dispatcher
+                           .BeginInvoke(new Action(() => PushIcons(taskbarIcon,
+                                                                          icon,
+                                                                          value)));
 
-                return ;
+                return;
             }
 
             //push the icons to the system tray
-            taskbarIcon.Icon        = icon ;
-            taskbarIcon.ToolTipText = $"Desk Height: {value}cm" ;
+            taskbarIcon.Icon = icon;
+            taskbarIcon.ToolTipText = $"Desk Height: {value}cm";
         }
 
-        private readonly Color _brushDarkBlue  = ColorTranslator.FromHtml ( "#FF0048A3" ) ;
-        private readonly Color _brushLightBlue = ColorTranslator.FromHtml ( "#FF0098F3" ) ;
+        private readonly Color _brushDarkBlue = ColorTranslator.FromHtml("#FF0048A3");
+        private readonly Color _brushLightBlue = ColorTranslator.FromHtml("#FF0098F3");
     }
 }

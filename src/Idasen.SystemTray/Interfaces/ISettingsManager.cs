@@ -1,12 +1,12 @@
-﻿using System.Threading.Tasks ;
+﻿using System.Threading.Tasks;
 
 namespace Idasen.SystemTray.Interfaces
 {
     public interface ISettingsManager
     {
-        ISettings CurrentSettings { get ; }
+        ISettings CurrentSettings { get; }
 
-        Task Save ( ) ;
-        Task Load ( ) ;
+        Task Save();
+        Task Load();
     }
 }

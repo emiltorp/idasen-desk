@@ -1,37 +1,36 @@
-﻿using System.Diagnostics.CodeAnalysis ;
-using Autofac ;
-using Idasen.BluetoothLE.Linak ;
-using Idasen.SystemTray.Interfaces ;
-using Idasen.SystemTray.Settings ;
-using Idasen.SystemTray.Utils ;
+﻿using Autofac;
+using Idasen.BluetoothLE.Linak;
+using Idasen.SystemTray.Interfaces;
+using Idasen.SystemTray.Settings;
+using Idasen.SystemTray.Utils;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Idasen.SystemTray
 {
-    // ReSharper disable once InconsistentNaming
-    [ ExcludeFromCodeCoverage ]
+    [ExcludeFromCodeCoverage]
     public class SystemTrayModule
         : Module
     {
-        protected override void Load ( ContainerBuilder builder )
+        protected override void Load(ContainerBuilder builder)
         {
-            builder.RegisterModule < BluetoothLELinakModule > ( ) ;
+            _ = builder.RegisterModule<BluetoothLELinakModule>();
 
-            builder.RegisterType < SettingsManager > ( )
-                   .As < ISettingsManager > ( ) ;
+            _ = builder.RegisterType<SettingsManager>()
+                   .As<ISettingsManager>();
 
-            builder.RegisterType < VersionProvider > ( )
-                   .As < IVersionProvider > ( ) ;
+            _ = builder.RegisterType<VersionProvider>()
+                   .As<IVersionProvider>();
 
-            builder.RegisterType < TaskbarIconProvider > ( )
-                   .As < ITaskbarIconProvider > ( )
-                   .SingleInstance ( ) ;
+            _ = builder.RegisterType<TaskbarIconProvider>()
+                   .As<ITaskbarIconProvider>()
+                   .SingleInstance();
 
-            builder.RegisterType < TaskbarIconProviderFactory > ( )
-                   .As < ITaskbarIconProviderFactory > ( )
-                   .SingleInstance ( ) ;
+            _ = builder.RegisterType<TaskbarIconProviderFactory>()
+                   .As<ITaskbarIconProviderFactory>()
+                   .SingleInstance();
 
-            builder.RegisterType < DynamicIconCreator > ( )
-                   .As < IDynamicIconCreator > ( ) ;
+            _ = builder.RegisterType<DynamicIconCreator>()
+                   .As<IDynamicIconCreator>();
         }
     }
 }

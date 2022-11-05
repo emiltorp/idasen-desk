@@ -1,10 +1,9 @@
-﻿using Hardcodet.Wpf.TaskbarNotification ;
+﻿using Hardcodet.Wpf.TaskbarNotification;
 
 namespace Idasen.SystemTray
 {
     public interface IDynamicIconCreator
     {
-        void Update ( TaskbarIcon taskbarIcon ,
-                      int         height ) ;
+        void Update(TaskbarIcon taskbarIcon, int height);
     }
 }

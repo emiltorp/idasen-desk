@@ -12,8 +12,7 @@
         <MenuItem Header="Connect" Command="{Binding ConnectCommand}" />
         <MenuItem Header="Disconnect" Command="{Binding DisconnectCommand}" />
         <Separator />
-        <MenuItem Header="Show Settings" Command="{Binding ShowSettingsCommand}" />
-        <MenuItem Header="Hide Settings" Command="{Binding HideSettingsCommand}" />
+        <MenuItem Header="Settings" Command="{Binding ShowSettingsCommand}" />
         <Separator />
         <MenuItem Header="Standing" Command="{Binding StandingCommand}" />
         <MenuItem Header="Seating" Command="{Binding SeatingCommand}" />

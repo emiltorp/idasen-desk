@@ -1,25 +1,21 @@
-﻿using System ;
-using System.Reactive.Concurrency ;
-using System.Reactive.Linq ;
-using System.Threading ;
-using System.Threading.Tasks ;
-using System.Windows ;
-using System.Windows.Controls.Primitives ;
-using System.Windows.Input ;
-using Hardcodet.Wpf.TaskbarNotification ;
-using Idasen.BluetoothLE.Core ;
-using Idasen.BluetoothLE.Linak.Interfaces ;
-using Idasen.SystemTray.Interfaces ;
-using Idasen.SystemTray.Utils ;
-using JetBrains.Annotations ;
-using NHotkey ;
-using Serilog ;
+﻿using Idasen.BluetoothLE.Core;
+using Idasen.BluetoothLE.Linak.Interfaces;
+using Idasen.SystemTray.Interfaces;
+using Idasen.SystemTray.Utils;
+using Microsoft.Toolkit.Uwp.Notifications;
+using NHotkey;
 using NHotkey.Wpf;
-using Application = System.Windows.Application ;
-using Constants = Idasen.BluetoothLE.Characteristics.Common.Constants ;
-using MessageBox = System.Windows.MessageBox ;
-
-// ReSharper disable UnusedMember.Global
+using Serilog;
+using System;
+using System.Reactive.Concurrency;
+using System.Reactive.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+using System.Windows;
+using System.Windows.Input;
+using Application = System.Windows.Application;
+using Constants = Idasen.BluetoothLE.Characteristics.Common.Constants;
+using MessageBox = System.Windows.MessageBox;
 
 namespace Idasen.SystemTray
 {
@@ -31,156 +27,100 @@ namespace Idasen.SystemTray
     public class NotifyIconViewModel
         : IDisposable
     {
-        private static readonly KeyGesture IncrementGesture = new KeyGesture(Key.Up, ModifierKeys.Control | ModifierKeys.Alt | ModifierKeys.Shift);
-        private static readonly KeyGesture DecrementGesture = new KeyGesture(Key.Down, ModifierKeys.Control | ModifierKeys.Alt | ModifierKeys.Shift);
+        private static readonly KeyGesture IncrementGesture = new(Key.Up, ModifierKeys.Control | ModifierKeys.Alt | ModifierKeys.Shift);
+        private static readonly KeyGesture DecrementGesture = new(Key.Down, ModifierKeys.Control | ModifierKeys.Alt | ModifierKeys.Shift);
 
-        public NotifyIconViewModel ( )
+        public NotifyIconViewModel()
         {
         }
 
-        public NotifyIconViewModel (
-            [ NotNull ] ILogger                logger ,
-            [ NotNull ] ISettingsManager       manager ,
-            [ NotNull ] Func < IDeskProvider > providerFactory ,
-            [ NotNull ] IScheduler             scheduler ,
-            [ NotNull ] IErrorManager          errorManager ,
-            [ NotNull ] IVersionProvider       versionProvider ,
-            [ NotNull ] Func<Application, ITaskbarIconProvider> factory )
+        public NotifyIconViewModel(
+            ILogger logger,
+            ISettingsManager manager,
+            Func<IDeskProvider> providerFactory,
+            IScheduler scheduler,
+            IErrorManager errorManager,
+            IVersionProvider versionProvider,
+            Func<Application, ITaskbarIconProvider> factory)
         {
-            Guard.ArgumentNotNull ( logger ,
-                                    nameof ( logger ) ) ;
-            Guard.ArgumentNotNull ( manager ,
-                                    nameof ( manager ) ) ;
-            Guard.ArgumentNotNull ( providerFactory ,
-                                    nameof ( providerFactory ) ) ;
-            Guard.ArgumentNotNull ( scheduler ,
-                                    nameof ( scheduler ) ) ;
-            Guard.ArgumentNotNull ( errorManager ,
-                                    nameof ( errorManager ) ) ;
-            Guard.ArgumentNotNull ( versionProvider ,
-                                    nameof ( versionProvider ) ) ;
-            Guard.ArgumentNotNull(factory,
-                                  nameof(factory));
+            Guard.ArgumentNotNull(logger, nameof(logger));
+            Guard.ArgumentNotNull(manager, nameof(manager));
+            Guard.ArgumentNotNull(providerFactory, nameof(providerFactory));
+            Guard.ArgumentNotNull(scheduler, nameof(scheduler));
+            Guard.ArgumentNotNull(errorManager, nameof(errorManager));
+            Guard.ArgumentNotNull(versionProvider, nameof(versionProvider));
+            Guard.ArgumentNotNull(factory, nameof(factory));
 
-            _scheduler = scheduler ;
-            _manager         = manager ;
+            _scheduler = scheduler;
+            _manager = manager;
             _providerFactory = providerFactory;
-            _scheduler       = scheduler ;
-            _errorManager    = errorManager;
+            _scheduler = scheduler;
+            _errorManager = errorManager;
             _versionProvider = versionProvider;
-            _iconProvider    = factory(null) ;
+            _iconProvider = factory(null);
         }
 
         private void HotkeyManager_HotkeyAlreadyRegistered(object sender, HotkeyAlreadyRegisteredEventArgs e)
         {
-            MessageBox.Show( $"The hotkey {e.Name} is already registered by another application" );
+            _ = MessageBox.Show($"The hotkey {e.Name} is already registered by another application");
         }
 
-        public void Dispose ( )
+        public void Dispose()
         {
-            _logger.Information ( "Disposing..." ) ;
+            _logger.Information("Disposing...");
 
-            _tokenSource?.Cancel ( ) ;
+            _tokenSource?.Cancel();
 
-            DisposeDesk ( ) ;
+            DisposeDesk();
 
-            _deskProvider?.Dispose ( ) ;
-            _notifyIcon?.Dispose ( ) ;
-            _tokenSource?.Dispose ( ) ;
+            _deskProvider?.Dispose();
+            _tokenSource?.Dispose();
         }
 
         /// <summary>
         ///     Shows a window, if none is already open.
         /// </summary>
-        public ICommand ShowSettingsCommand
+        public ICommand ShowSettingsCommand => new DelegateCommand
         {
-            get
-            {
-                return new DelegateCommand
-                       {
-                           CanExecuteFunc = ( ) => SettingsWindow == null ,
-                           CommandAction  = DoShowSettings
-                       } ;
-            }
-        }
-
-        /// <summary>
-        ///     Hides the main window. This command is only enabled if a window is open.
-        /// </summary>
-        public ICommand HideSettingsCommand
-        {
-            get
-            {
-                return new DelegateCommand
-                       {
-                           CommandAction  = DoHideSettings ,
-                           CanExecuteFunc = ( ) => SettingsWindow != null
-                       } ;
-            }
-        }
+            CanExecuteFunc = () => SettingsWindow == null,
+            CommandAction = DoShowSettings
+        };
 
         /// <summary>
         ///     Connects to the Idasen Desk.
         /// </summary>
-        public ICommand ConnectCommand
+        public ICommand ConnectCommand => new DelegateCommand
         {
-            get
-            {
-                return new DelegateCommand
-                       {
-                           // ReSharper disable once AsyncVoidLambda
-                           CommandAction  = async ( ) => await DoConnect ( ) ,
-                           CanExecuteFunc = ( ) => _desk == null
-                       } ;
-            }
-        }
+            CommandAction = async () => await DoConnect(),
+            CanExecuteFunc = () => _desk == null
+        };
 
         /// <summary>
         ///     Disconnects from the Idasen Desk.
         /// </summary>
-        public ICommand DisconnectCommand
+        public ICommand DisconnectCommand => new DelegateCommand
         {
-            get
-            {
-                return new DelegateCommand
-                       {
-                           CommandAction  = DoDisconnect ,
-                           CanExecuteFunc = ( ) => _desk != null
-                       } ;
-            }
-        }
+            CommandAction = DoDisconnect,
+            CanExecuteFunc = () => _desk != null
+        };
 
         /// <summary>
         ///     Moves the desk to the standing height.
         /// </summary>
-        public ICommand StandingCommand
+        public ICommand StandingCommand => new DelegateCommand
         {
-            get
-            {
-                return new DelegateCommand
-                       {
-                           // ReSharper disable once AsyncVoidLambda
-                           CommandAction  = async ( ) => await DoStanding ( ) ,
-                           CanExecuteFunc = ( ) => _desk != null
-                       } ;
-            }
-        }
+            CommandAction = async () => await DoStanding(),
+            CanExecuteFunc = () => _desk != null
+        };
 
         /// <summary>
         ///     Moves the desk to the seating height.
         /// </summary>
-        public ICommand SeatingCommand
+        public ICommand SeatingCommand => new DelegateCommand
         {
-            get
-            {
-                return new DelegateCommand
-                       {
-                           // ReSharper disable once AsyncVoidLambda
-                           CommandAction  = async ( ) => await DoSeating ( ) ,
-                           CanExecuteFunc = ( ) => _desk != null
-                       } ;
-            }
-        }
+            CommandAction = async () => await DoSeating(),
+            CanExecuteFunc = () => _desk != null
+        };
 
         /// <summary>
         ///     Shuts down the application.
@@ -189,185 +129,142 @@ namespace Idasen.SystemTray
             new DelegateCommand
             {
                 CommandAction = DoExitApplication
-            } ;
+            };
 
-        [ CanBeNull ]
         private ISettingsWindow SettingsWindow
         {
-            get => Application.Current.MainWindow as ISettingsWindow ;
-            set => Application.Current.MainWindow = value as Window ;
+            get => Application.Current.MainWindow as ISettingsWindow;
+            set => Application.Current.MainWindow = value as Window;
         }
 
-        public bool IsInitialize => _logger != null && _manager != null ; // todo  && _provider != null ;
+        public bool IsInitialize => _logger != null && _manager != null; // todo  && _provider != null ;
 
-        private void DoExitApplication ( )
+        private void DoExitApplication()
         {
-            _logger.Information ( "##### Exit..." ) ;
+            _logger.Information("##### Exit...");
 
-            _tokenSource.Cancel ( ) ;
-            Application.Current.Shutdown ( ) ;
+            _tokenSource.Cancel();
+            Application.Current.Shutdown();
         }
 
-        private void DoShowSettings ( )
+        private void DoShowSettings()
         {
-            _logger.Debug ( $"{nameof ( ShowSettingsCommand )}" ) ;
+            _logger.Debug($"{nameof(ShowSettingsCommand)}");
 
-            SettingsWindow = new SettingsWindow ( _logger ,
-                                                  _manager,
-                                                  _versionProvider) ;
+            SettingsWindow = new SettingsWindow(_logger, _manager, _versionProvider);
 
-            if ( SettingsWindow == null )
-            {
-                return ;
-            }
-
-            SettingsWindow.Show ( ) ;
-            SettingsWindow.AdvancedSettingsChanged += OnAdvancedSettingsChanged ;
-            SettingsWindow.LockSettingsChanged     += OnLockSettingsChanged ;
-        }
-
-        private void DoHideSettings ( )
-        {
-            _logger.Debug ( $"{nameof ( HideSettingsCommand )}" ) ;
-
-            if ( SettingsWindow == null )
+            if (SettingsWindow == null)
             {
                 return;
             }
 
-            SettingsWindow.AdvancedSettingsChanged -= OnAdvancedSettingsChanged;
-            SettingsWindow.LockSettingsChanged     -= OnLockSettingsChanged;
-            SettingsWindow.Close ( ) ;
-            SettingsWindow = null ;
+            SettingsWindow.Show();
+            SettingsWindow.AdvancedSettingsChanged += OnAdvancedSettingsChanged;
+            SettingsWindow.LockSettingsChanged += OnLockSettingsChanged;
         }
 
-        private void DoDisconnect ( )
+        private void DoDisconnect()
         {
             try
             {
-                _logger.Debug ( $"{nameof ( DisconnectCommand )}" ) ;
+                _logger.Debug($"{nameof(DisconnectCommand)}");
 
-                Disconnect ( ) ;
+                Disconnect();
             }
-            catch ( Exception e )
+            catch (Exception e)
             {
-                _logger.Error ( e ,
-                                $"Failed to call {nameof ( DisconnectCommand )}" ) ;
+                _logger.Error(e,
+                                $"Failed to call {nameof(DisconnectCommand)}");
 
-                _errorManager.PublishForMessage ( $"Failed to call {nameof ( DisconnectCommand )}" ) ;
+                _errorManager.PublishForMessage($"Failed to call {nameof(DisconnectCommand)}");
             }
         }
 
-        private async Task DoConnect ( )
-        {
-            _logger.Error ( $"*** {nameof ( DoConnect )}" ) ;
-
-            try
-            {
-                _logger.Debug ( $"{nameof ( DoConnect )}" ) ;
-
-                await Connect ( ).ConfigureAwait ( false ) ;
-            }
-            catch ( Exception e )
-            {
-                _logger.Error ( e ,
-                                $"Failed to call {nameof ( DoConnect )}" ) ;
-
-                _errorManager.PublishForMessage ( $"Failed to call {nameof ( DoConnect )}" ) ;
-            }
-        }
-
-        private async Task DoStanding ( )
+        private async Task DoConnect()
         {
             try
             {
-                _logger.Debug ( $"{nameof ( StandingCommand )}" ) ;
-
-                await Standing ( ).ConfigureAwait ( false ) ;
+                _logger.Debug($"{nameof(DoConnect)}");
+                await Connect().ConfigureAwait(false);
             }
-            catch ( Exception e )
+            catch (Exception e)
             {
-                _logger.Error ( e ,
-                                $"Failed to call {nameof ( StandingCommand )}" ) ;
-
-                _errorManager.PublishForMessage ( $"Failed to call {nameof ( StandingCommand )}" ) ;
+                _logger.Error(e, $"Failed to call {nameof(DoConnect)}");
+                _errorManager.PublishForMessage($"Failed to call {nameof(DoConnect)}");
             }
         }
 
-        private async Task DoSeating ( )
+        private async Task DoStanding()
         {
             try
             {
-                _logger.Debug ( $"{nameof ( SeatingCommand )}" ) ;
-
-                await _manager.Load ( )
-                              .ConfigureAwait ( false ) ;
-
-                _desk?.MoveTo ( _manager.CurrentSettings.SeatingHeightInCm *
-                                100 ) ; // todo duplicate
+                _logger.Debug($"{nameof(StandingCommand)}");
+                await Standing().ConfigureAwait(false);
             }
-            catch ( Exception e )
+            catch (Exception e)
             {
-                _logger.Error ( e ,
-                                $"Failed to call {nameof ( SeatingCommand )}" ) ;
-
-                _errorManager.PublishForMessage ( $"Failed to call {nameof ( SeatingCommand )}" ) ;
+                _logger.Error(e, $"Failed to call {nameof(StandingCommand)}");
+                _errorManager.PublishForMessage($"Failed to call {nameof(StandingCommand)}");
             }
         }
 
-        private void OnErrorChanged ( IErrorDetails details )
+        private async Task DoSeating()
         {
-            _logger.Error ( $"[{_desk?.DeviceName}] {details.Message}" ) ;
-
-            ShowFancyBalloon ( "Error" ,
-                               details.Message ,
-                               visibilityBulbRed : Visibility.Visible ) ;
+            try
+            {
+                _logger.Debug($"{nameof(SeatingCommand)}");
+                await _manager.Load().ConfigureAwait(false);
+                _desk?.MoveTo(_manager.CurrentSettings.SeatingHeightInCm * 100);
+            }
+            catch (Exception e)
+            {
+                _logger.Error(e, $"Failed to call {nameof(SeatingCommand)}");
+                _errorManager.PublishForMessage($"Failed to call {nameof(SeatingCommand)}");
+            }
         }
 
-        private async Task Standing ( )
+        private void OnErrorChanged(IErrorDetails details)
         {
-            _logger.Debug ( "Executing Standing..." ) ;
-
-            await _manager.Load ( ) ;
-
-            _desk?.MoveTo ( _manager.CurrentSettings.StandingHeightInCm * 100 ) ;
+            _logger.Error($"[{_desk?.DeviceName}] {details.Message}");
+            ShowNotification("Error", details.Message);
         }
 
-        public NotifyIconViewModel Initialize (
-            [ NotNull ] ILogger                logger ,
-            [ NotNull ] ISettingsManager       manager ,
-            [ NotNull ] Func < IDeskProvider > providerFactory ,
-            [ NotNull ] IErrorManager          errorManager,
-            [ NotNull ] IVersionProvider       versionProvider,
-            [ NotNull ] ITaskbarIconProvider   iconProvider)
+        private async Task Standing()
         {
-            Guard.ArgumentNotNull ( iconProvider ,
-                                    nameof ( iconProvider ) ) ;
-            Guard.ArgumentNotNull ( logger ,
-                                    nameof ( logger ) ) ;
-            Guard.ArgumentNotNull ( manager ,
-                                    nameof ( manager ) ) ;
-            Guard.ArgumentNotNull ( providerFactory ,
-                                    nameof ( providerFactory ) ) ;
-            Guard.ArgumentNotNull ( errorManager ,
-                                    nameof ( errorManager ) ) ;
-            Guard.ArgumentNotNull ( versionProvider ,
-                                    nameof ( versionProvider ) ) ;
+            _logger.Debug("Executing Standing...");
+            await _manager.Load();
+            _desk?.MoveTo(_manager.CurrentSettings.StandingHeightInCm * 100);
+        }
 
-            _logger          = logger ;
-            _manager         = manager ;
-            _providerFactory = providerFactory ;
-            _versionProvider = versionProvider ;
-            _iconProvider    = iconProvider ;
+        public NotifyIconViewModel Initialize(
+            ILogger logger,
+            ISettingsManager manager,
+            Func<IDeskProvider> providerFactory,
+            IErrorManager errorManager,
+            IVersionProvider versionProvider,
+            ITaskbarIconProvider iconProvider)
+        {
+            Guard.ArgumentNotNull(iconProvider, nameof(iconProvider));
+            Guard.ArgumentNotNull(logger, nameof(logger));
+            Guard.ArgumentNotNull(manager, nameof(manager));
+            Guard.ArgumentNotNull(providerFactory, nameof(providerFactory));
+            Guard.ArgumentNotNull(errorManager, nameof(errorManager));
+            Guard.ArgumentNotNull(versionProvider, nameof(versionProvider));
 
-            _logger.Debug ( "Initializing..." ) ;
+            _logger = logger;
+            _manager = manager;
+            _providerFactory = providerFactory;
+            _versionProvider = versionProvider;
+            _iconProvider = iconProvider;
 
-            _tokenSource = new CancellationTokenSource ( TimeSpan.FromSeconds ( 60 ) ) ;
-            _token       = _tokenSource.Token ;
+            _logger.Debug("Initializing...");
+
+            _tokenSource = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+            _token = _tokenSource.Token;
 
             _onErrorChanged = errorManager.ErrorChanged
-                                          .ObserveOn ( _scheduler )
-                                          .Subscribe ( OnErrorChanged ) ;
+                                          .ObserveOn(_scheduler)
+                                          .Subscribe(OnErrorChanged);
 
 
             HotkeyManager.HotkeyAlreadyRegistered += HotkeyManager_HotkeyAlreadyRegistered;
@@ -375,232 +272,169 @@ namespace Idasen.SystemTray
             HotkeyManager.Current.AddOrReplace("Increment", IncrementGesture, OnGlobalHotKeyStanding);
             HotkeyManager.Current.AddOrReplace("Decrement", DecrementGesture, OnGlobalHotKeySeating);
 
-            return this ;
+            return this;
         }
 
-        public async Task AutoConnect ( )
+        public async Task AutoConnect()
         {
-            _logger.Debug ( "Auto connecting..." ) ;
+            _logger.Debug("Auto connecting...");
 
             try
             {
-                CheckIfInitialized ( ) ;
+                CheckIfInitialized();
 
-                _logger.Debug ( "Trying to load settings..." ) ;
+                _logger.Debug("Trying to load settings...");
+                await _manager.Load();
 
-                await _manager.Load ( ) ;
+                _logger.Debug("Trying to auto connect to Idasen Desk...");
+                await Task.Delay(TimeSpan.FromSeconds(3), _token);
 
-                _logger.Debug ( "Trying to auto connect to Idasen Desk..." ) ;
+                ShowNotification("Auto Connect", "Trying to auto connect to Idasen Desk...");
 
-                await Task.Delay ( TimeSpan.FromSeconds ( 3 ) ,
-                                   _token ) ;
-
-                ShowFancyBalloon ( "Auto Connect" ,
-                                   "Trying to auto connect to Idasen Desk..." ,
-                                   visibilityBulbYellow : Visibility.Visible ) ;
-
-                await Connect ( ) ;
+                await Connect();
             }
-            catch ( TaskCanceledException )
+            catch (TaskCanceledException)
             {
-                _logger.Information ( "Auto connect was canceled" ) ;
+                _logger.Information("Auto connect was canceled");
             }
-            catch ( Exception e )
+            catch (Exception e)
             {
-                _logger.Error ( e ,
-                                "Failed to auto connect to desk" ) ;
-
-                ConnectFailed ( ) ;
+                _logger.Error(e, "Failed to auto connect to desk");
+                ConnectFailed();
             }
         }
 
-        private void CheckIfInitialized ( )
+        private void CheckIfInitialized()
         {
-            if ( ! IsInitialize )
-                throw new Exception ( "Initialize needs to be called first!" ) ;
+            if (!IsInitialize)
+            {
+                throw new Exception("Initialize needs to be called first!");
+            }
         }
 
-        private async Task Connect ( )
+        private async Task Connect()
         {
             try
             {
-                _logger.Debug ( "Trying to initialize provider..." ) ;
+                _logger.Debug("Trying to initialize provider...");
 
-                _deskProvider?.Dispose ( ) ;
-                _deskProvider = _providerFactory ( ) ;
-                _deskProvider.Initialize ( _manager.CurrentSettings.DeviceName ,
-                                       _manager.CurrentSettings.DeviceAddress ,
-                                       _manager.CurrentSettings.DeviceMonitoringTimeout ) ;
+                _deskProvider?.Dispose();
+                _deskProvider = _providerFactory();
+                _ = _deskProvider.Initialize(_manager.CurrentSettings.DeviceName,
+                                       _manager.CurrentSettings.DeviceAddress,
+                                       _manager.CurrentSettings.DeviceMonitoringTimeout);
 
-                _logger.Debug ( $"[{_desk?.DeviceName}] Trying to connect to Idasen Desk..." ) ;
+                _logger.Debug($"[{_desk?.DeviceName}] Trying to connect to Idasen Desk...");
 
-                // DisposeDesk ( ) ;
+                _tokenSource?.Cancel(false);
 
-                _tokenSource?.Cancel ( false ) ;
+                _tokenSource = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+                _token = _tokenSource.Token;
 
-                _tokenSource = new CancellationTokenSource ( TimeSpan.FromSeconds ( 60 ) ) ;
-                _token       = _tokenSource.Token ;
+                (bool isSuccess, IDesk desk) = await _deskProvider.TryGetDesk(_token);
 
-                var (isSuccess , desk) = await _deskProvider.TryGetDesk ( _token ) ;
-
-                if ( isSuccess )
-                    ConnectSuccessful ( desk ) ;
+                if (isSuccess)
+                {
+                    ConnectSuccessful(desk);
+                }
                 else
-                    ConnectFailed ( ) ;
+                {
+                    ConnectFailed();
+                }
             }
-            catch ( Exception e )
+            catch (Exception e)
             {
-                _logger.Error ( e ,
-                                $"[{_desk?.DeviceName}] Failed to connect" ) ;
-
-                ConnectFailed ( ) ;
+                _logger.Error(e, $"[{_desk?.DeviceName}] Failed to connect");
+                ConnectFailed();
             }
         }
 
-        private void Disconnect ( )
+        private void Disconnect()
         {
             try
             {
-                _logger.Debug ( $"[{_desk?.DeviceName}] Trying to disconnect from Idasen Desk..." ) ;
+                _logger.Debug($"[{_desk?.DeviceName}] Trying to disconnect from Idasen Desk...");
 
-                DisposeDesk ( ) ;
+                DisposeDesk();
 
-                _tokenSource?.Cancel ( false ) ;
+                _tokenSource?.Cancel(false);
 
-                _logger.Debug ( $"[{_desk?.DeviceName}] ...disconnected from Idasen Desk" ) ;
+                _logger.Debug($"[{_desk?.DeviceName}] ...disconnected from Idasen Desk");
             }
-            catch ( Exception e )
+            catch (Exception e)
             {
-                _logger.Error ( e ,
-                                "Failed to disconnect" ) ;
-
-                ConnectFailed ( ) ;
+                _logger.Error(e, "Failed to disconnect");
+                ConnectFailed();
             }
         }
 
-        private void ConnectFailed ( )
+        private void ConnectFailed()
         {
-            _logger.Debug ( "Connection failed..." ) ;
+            _logger.Debug("Connection failed...");
 
-            Disconnect ( ) ;
+            Disconnect();
 
-            ShowFancyBalloon ( "Failed to Connect" ,
-                               Constants.CheckAndEnableBluetooth ,
-                               visibilityBulbRed : Visibility.Visible ) ;
+            ShowNotification("Failed to Connect", Constants.CheckAndEnableBluetooth);
         }
 
-        private void DisposeDesk ( )
+        private void DisposeDesk()
         {
-            _logger.Debug ( $"[{_desk?.Name}] Disposing desk" ) ;
+            _logger.Debug($"[{_desk?.Name}] Disposing desk");
 
-            _finished?.Dispose ( ) ;
-            _desk?.Dispose ( ) ;
-            _deskProvider?.Dispose ( ) ;
+            _finished?.Dispose();
+            _desk?.Dispose();
+            _deskProvider?.Dispose();
 
-            _finished = null ;
-            _desk     = null ;
-            _deskProvider = null ;
+            _finished = null;
+            _desk = null;
+            _deskProvider = null;
         }
 
-        private void ConnectSuccessful ( IDesk desk )
+        private void ConnectSuccessful(IDesk desk)
         {
-            _logger.Information ( $"[{desk.DeviceName}] Connected to {desk.DeviceName} " +
-                                  $"with address {desk.BluetoothAddress} "               +
-                                  $"(MacAddress {desk.BluetoothAddress.ToMacAddress ( )})" ) ;
+            _logger.Information($"[{desk.DeviceName}] Connected to {desk.DeviceName} " +
+                                  $"with address {desk.BluetoothAddress} " +
+                                  $"(MacAddress {desk.BluetoothAddress.ToMacAddress()})");
 
-            _desk = desk ;
+            _desk = desk;
 
-            _finished = _desk.FinishedChanged
-                             .ObserveOn ( _scheduler )
-                             .Subscribe ( OnFinishedChanged ) ;
+            _finished = _desk.FinishedChanged.ObserveOn(_scheduler).Subscribe(OnFinishedChanged);
 
-            ShowFancyBalloon ( "Success" ,
-                               "Connected to desk: " +
-                               Environment.NewLine   +
-                               $"'{desk.Name}'" ,
-                               Visibility.Visible ) ;
+            ShowNotification("Success", $"Connected to desk: {Environment.NewLine}{desk.Name}");
 
-            _iconProvider.Initialize ( _desk ) ;
+            _iconProvider.Initialize(_desk);
 
-            _logger.Debug ( $"[{_desk?.DeviceName}] Connected successful" ) ;
+            _logger.Debug($"[{_desk?.DeviceName}] Connected successful");
 
-            if ( ! _manager.CurrentSettings.DeviceLocked )
-                return ;
-
-            _logger.Information ( "Locking desk movement" );
-
-            _desk?.MoveLock ( ) ;
-        }
-
-        private void OnFinishedChanged ( uint height )
-        {
-            _logger.Debug ( $"Height = {height}" ) ;
-
-            var heightInCm = Math.Round ( height / 100.0 ) ;
-
-            ShowFancyBalloon ( "Finished" ,
-                               $"Desk height is {heightInCm:F0} cm" ,
-                               Visibility.Visible ) ;
-        }
-
-        private void ShowFancyBalloon ( string     title ,
-                                        string     text ,
-                                        Visibility visibilityBulbGreen  = Visibility.Hidden ,
-                                        Visibility visibilityBulbYellow = Visibility.Hidden ,
-                                        Visibility visibilityBulbRed    = Visibility.Hidden )
-        {
-            _notifyIcon ??= ( TaskbarIcon )Application.Current.FindResource ( "NotifyIcon" ) ;
-
-            if ( _notifyIcon == null )
+            if (!_manager.CurrentSettings.DeviceLocked)
             {
-                _logger.Debug ( "Failed because NotifyIcon is null" ) ;
-
-                return ;
+                return;
             }
 
-            if ( ! _notifyIcon.Dispatcher.CheckAccess ( ) )
-            {
-                _logger.Debug ( "Dispatching call on UI thread" ) ;
+            _logger.Information("Locking desk movement");
 
-                _notifyIcon.Dispatcher.BeginInvoke ( new Action ( ( ) => ShowFancyBalloon ( title ,
-                                                                                            text ,
-                                                                                            visibilityBulbGreen ,
-                                                                                            visibilityBulbYellow ,
-                                                                                            visibilityBulbRed ) ) ) ;
-
-                return ;
-            }
-
-            _logger.Debug ( $"Title = '{title}', "                              +
-                            $"Text = '{text}', "                                +
-                            $"visibilityBulbGreen = '{visibilityBulbGreen}', "  +
-                            $"visibilityBulbYellow = '{visibilityBulbYellow}' " +
-                            $"visibilityBulbRed = '{visibilityBulbRed}'" ) ;
-
-            var balloon = new FancyBalloon
-                          {
-                              BalloonTitle         = title ,
-                              BalloonText          = text ,
-                              VisibilityBulbGreen  = visibilityBulbGreen ,
-                              VisibilityBulbYellow = visibilityBulbYellow ,
-                              VisibilityBulbRed    = visibilityBulbRed
-                          } ;
-
-            _notifyIcon.ShowCustomBalloon ( balloon ,
-                                            PopupAnimation.Slide ,
-                                            4000 ) ;
+            _desk?.MoveLock();
         }
 
-        private async void OnAdvancedSettingsChanged(object    sender,
-                                                     EventArgs args)
+        private void OnFinishedChanged(uint height)
+        {
+            _logger.Debug($"Height = {height}");
+            double heightInCm = Math.Round(height / 100.0);
+            ShowNotification("Finished", $"Desk height is {heightInCm:F0} cm");
+        }
+
+        private void ShowNotification(string title, string text)
+        {
+            new ToastContentBuilder().AddText(title).AddText(text).Show();
+        }
+
+        private async void OnAdvancedSettingsChanged(object sender, EventArgs args)
         {
             try
             {
                 _tokenSource?.Cancel(false);
 
-                // ReSharper disable once MethodSupportsCancellation
-                await Task.Delay(3000)
-                          .ConfigureAwait(false);
+                await Task.Delay(3000).ConfigureAwait(false);
 
                 Disconnect();
 
@@ -608,25 +442,26 @@ namespace Idasen.SystemTray
             }
             catch (Exception e)
             {
-                _logger.Error(e,
-                              "Failed  to reconnect after advanced settings change.");
+                _logger.Error(e, "Failed  to reconnect after advanced settings change.");
             }
         }
 
-        private void OnLockSettingsChanged ( object                       sender ,
-                                             LockSettingsChangedEventArgs args )
+        private void OnLockSettingsChanged(object sender, LockSettingsChangedEventArgs args)
         {
             try
             {
-                if ( args.IsLocked )
-                    _desk?.MoveLock ( ) ;
+                if (args.IsLocked)
+                {
+                    _desk?.MoveLock();
+                }
                 else
-                    _desk?.MoveUnlock ( ) ;
+                {
+                    _desk?.MoveUnlock();
+                }
             }
-            catch ( Exception e )
+            catch (Exception e)
             {
-                _logger.Error ( e ,
-                                "Failed  to lock/unlock after locked settings change." ) ;
+                _logger.Error(e, "Failed  to lock/unlock after locked settings change.");
             }
         }
 
@@ -637,9 +472,11 @@ namespace Idasen.SystemTray
                 _logger.Information("Received global hot key for 'Standing' command...");
 
                 if (!StandingCommand.CanExecute(this))
+                {
                     return;
+                }
 
-                var task = Standing().ConfigureAwait(false);
+                System.Runtime.CompilerServices.ConfiguredTaskAwaitable task = Standing().ConfigureAwait(false);
 
                 StandingCommand.Execute(this);
             }
@@ -656,7 +493,9 @@ namespace Idasen.SystemTray
                 _logger.Information("Received global hot key for 'Seating' command...");
 
                 if (!SeatingCommand.CanExecute(this))
+                {
                     return;
+                }
 
                 SeatingCommand.Execute(this);
             }
@@ -667,20 +506,19 @@ namespace Idasen.SystemTray
         }
 
 
-        private readonly IErrorManager    _errorManager ;
-        private readonly IScheduler _scheduler = Scheduler.CurrentThread ;
+        private readonly IErrorManager _errorManager;
+        private readonly IScheduler _scheduler = Scheduler.CurrentThread;
 
-        [ CanBeNull ] private      IDesk                   _desk ;
-        private                    IDisposable             _finished ;
-        private                    ILogger                 _logger ;
-        private                    ISettingsManager        _manager ;
-        private                    TaskbarIcon             _notifyIcon ;
-        [ UsedImplicitly ] private IDisposable             _onErrorChanged ;
-        private                    IVersionProvider        _versionProvider;
-        private                    ITaskbarIconProvider    _iconProvider ;
-        private                    IDeskProvider           _deskProvider ;
-        private                    Func < IDeskProvider >  _providerFactory ;
-        private                    CancellationToken       _token ;
-        private                    CancellationTokenSource _tokenSource ;
+        private IDesk _desk;
+        private IDisposable _finished;
+        private ILogger _logger;
+        private ISettingsManager _manager;
+        private IDisposable _onErrorChanged;
+        private IVersionProvider _versionProvider;
+        private ITaskbarIconProvider _iconProvider;
+        private IDeskProvider _deskProvider;
+        private Func<IDeskProvider> _providerFactory;
+        private CancellationToken _token;
+        private CancellationTokenSource _tokenSource;
     }
 }
