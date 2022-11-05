@@ -1,3 +1,10 @@
+# NOTE: Fork
+This fork is made from the excellent version by tschroedter with the intention to make notifcations look more "native" 
+and remove the custom styles of the settings pane. While updating I removed all references to Jetbrains products, 
+as well as updated the coding style to the Microsoft default and therefore will not merge to the creators repo if not requested. 
+
+Original README below:
+
 # Latest Changes
 - Added support for Windows 11
 - Updated to .Net 6.0
