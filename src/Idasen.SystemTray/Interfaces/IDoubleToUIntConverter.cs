@@ -2,7 +2,7 @@
 {
     internal interface IDoubleToUIntConverter
     {
-        uint ConvertToUInt ( double value ,
-                             uint   defaultValue ) ;
+        uint ConvertToUInt(double value,
+                             uint defaultValue);
     }
 }

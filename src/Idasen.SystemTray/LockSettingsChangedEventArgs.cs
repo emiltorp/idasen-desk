@@ -1,15 +1,15 @@
-﻿using System ;
+﻿using System;
 
 namespace Idasen.SystemTray
 {
     public class LockSettingsChangedEventArgs
         : EventArgs
     {
-        public bool IsLocked { get ; }
+        public bool IsLocked { get; }
 
-        public LockSettingsChangedEventArgs ( bool isLocked )
+        public LockSettingsChangedEventArgs(bool isLocked)
         {
-            this.IsLocked = isLocked ;
+            IsLocked = isLocked;
         }
     }
 }

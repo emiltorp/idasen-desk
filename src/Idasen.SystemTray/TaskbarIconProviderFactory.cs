@@ -1,20 +1,20 @@
-﻿using System.Windows ;
-using Idasen.SystemTray.Interfaces ;
+﻿using Idasen.SystemTray.Interfaces;
+using System.Windows;
 
 namespace Idasen.SystemTray
 {
     public class TaskbarIconProviderFactory : ITaskbarIconProviderFactory
     {
-        public TaskbarIconProviderFactory ( TaskbarIconProvider.Factory factory )
+        public TaskbarIconProviderFactory(TaskbarIconProvider.Factory factory)
         {
-            _factory = factory ;
+            _factory = factory;
         }
 
-        public ITaskbarIconProvider Create ( Application application )
+        public ITaskbarIconProvider Create(Application application)
         {
-            return _factory ( application ) ;
+            return _factory(application);
         }
 
-        private readonly TaskbarIconProvider.Factory _factory ;
+        private readonly TaskbarIconProvider.Factory _factory;
     }
 }

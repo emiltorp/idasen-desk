@@ -1,74 +1,66 @@
-﻿using System ;
-using System.Reactive.Concurrency ;
-using System.Reactive.Linq ;
-using System.Windows ;
-using Hardcodet.Wpf.TaskbarNotification ;
-using Idasen.BluetoothLE.Core ;
-using Idasen.BluetoothLE.Linak ;
-using Idasen.BluetoothLE.Linak.Interfaces ;
-using Idasen.SystemTray.Interfaces ;
-using JetBrains.Annotations ;
-using Serilog ;
+﻿using Hardcodet.Wpf.TaskbarNotification;
+using Idasen.BluetoothLE.Core;
+using Idasen.BluetoothLE.Linak;
+using Idasen.BluetoothLE.Linak.Interfaces;
+using Idasen.SystemTray.Interfaces;
+using Serilog;
+using System;
+using System.Reactive.Concurrency;
+using System.Reactive.Linq;
+using System.Windows;
 
 namespace Idasen.SystemTray
 {
     public class TaskbarIconProvider : ITaskbarIconProvider
     {
-        public TaskbarIconProvider ( [ NotNull ] ILogger             logger ,
-                                     [ NotNull ] Application         application ,
-                                     [ NotNull ] IScheduler          scheduler ,
-                                     [ NotNull ] IDynamicIconCreator creator )
+        public TaskbarIconProvider(ILogger logger,
+                                   Application application,
+                                   IScheduler scheduler,
+                                   IDynamicIconCreator creator)
         {
-            Guard.ArgumentNotNull ( logger ,
-                                    nameof ( logger ) ) ;
-            Guard.ArgumentNotNull ( application ,
-                                    nameof ( application ) ) ;
-            Guard.ArgumentNotNull ( scheduler ,
-                                    nameof ( scheduler ) ) ;
-            Guard.ArgumentNotNull ( creator ,
-                                    nameof ( creator ) ) ;
+            Guard.ArgumentNotNull(logger, nameof(logger));
+            Guard.ArgumentNotNull(application, nameof(application));
+            Guard.ArgumentNotNull(scheduler, nameof(scheduler));
+            Guard.ArgumentNotNull(creator, nameof(creator));
 
-            _logger    = logger ;
-            _scheduler = scheduler ;
-            _creator   = creator ;
+            _logger = logger;
+            _scheduler = scheduler;
+            _creator = creator;
 
-            NotifyIcon = ( TaskbarIcon )application.FindResource ( "NotifyIcon" ) ;
+            NotifyIcon = (TaskbarIcon)application.FindResource("NotifyIcon");
         }
 
-        public TaskbarIcon NotifyIcon { get ; }
+        public TaskbarIcon NotifyIcon { get; }
 
 
-        public void Dispose ( )
+        public void Dispose()
         {
-            NotifyIcon?.Dispose ( ) ;
-            _disposable?.Dispose ( ) ;
+            NotifyIcon?.Dispose();
+            _disposable?.Dispose();
         }
 
-        public void Initialize ( [ NotNull ] IDesk desk )
+        public void Initialize(IDesk desk)
         {
-            Guard.ArgumentNotNull ( desk ,
-                                    nameof ( desk ) ) ;
+            Guard.ArgumentNotNull(desk, nameof(desk));
 
             _disposable = desk.HeightAndSpeedChanged
-                              .ObserveOn ( _scheduler )
-                              .Subscribe ( OnHeightAndSpeedChanged ) ;
+                              .ObserveOn(_scheduler)
+                              .Subscribe(OnHeightAndSpeedChanged);
         }
 
-        public delegate ITaskbarIconProvider Factory ( Application application ) ;
+        public delegate ITaskbarIconProvider Factory(Application application);
 
-        private void OnHeightAndSpeedChanged ( HeightSpeedDetails details )
+        private void OnHeightAndSpeedChanged(HeightSpeedDetails details)
         {
-            var heightInCm = Convert.ToInt32 ( Math.Round ( details.Height / 100.0 ) ) ;
-
-            _creator.Update ( NotifyIcon, heightInCm ) ;
-
+            int heightInCm = Convert.ToInt32(Math.Round(details.Height / 100.0));
+            _creator.Update(NotifyIcon, heightInCm);
             _logger.Debug($"Height: {heightInCm}");
         }
 
-        private readonly IDynamicIconCreator _creator ;
-        private readonly ILogger             _logger ;
-        private readonly IScheduler          _scheduler ;
+        private readonly IDynamicIconCreator _creator;
+        private readonly ILogger _logger;
+        private readonly IScheduler _scheduler;
 
-        private IDisposable _disposable ;
+        private IDisposable _disposable;
     }
 }

@@ -1,13 +1,13 @@
-﻿using System ;
+﻿using System;
 
 namespace Idasen.SystemTray.Interfaces
 {
     public interface ISettingsWindow
     {
-        void                                             Show ( ) ;
-        void                                             Close ( ) ;
+        void Show();
+        void Close();
 
-        event EventHandler                               AdvancedSettingsChanged ;
-        event EventHandler<LockSettingsChangedEventArgs> LockSettingsChanged ;
+        event EventHandler AdvancedSettingsChanged;
+        event EventHandler<LockSettingsChangedEventArgs> LockSettingsChanged;
     }
 }

@@ -1,4 +1,4 @@
-﻿using Idasen.SystemTray.Interfaces ;
+﻿using Idasen.SystemTray.Interfaces;
 
 namespace Idasen.SystemTray.Utils
 {
@@ -7,19 +7,19 @@ namespace Idasen.SystemTray.Utils
     {
         private readonly IStringToUIntConverter _stringConverter = new StringToUIntConverter();
 
-        public ulong DefaultIfEmpty ( string deviceAddress )
+        public ulong DefaultIfEmpty(string deviceAddress)
         {
-            return string.IsNullOrWhiteSpace ( deviceAddress )
+            return string.IsNullOrWhiteSpace(deviceAddress)
                        ? Constants.DefaultDeviceAddress
-                       : _stringConverter.ConvertToULong ( deviceAddress ,
-                                                           Constants.DefaultDeviceAddress ) ;
+                       : _stringConverter.ConvertToULong(deviceAddress,
+                                                           Constants.DefaultDeviceAddress);
         }
 
-        public string EmptyIfDefault ( ulong deviceAddress )
+        public string EmptyIfDefault(ulong deviceAddress)
         {
             return deviceAddress == Constants.DefaultDeviceAddress
                        ? string.Empty
-                       : deviceAddress.ToString ( ) ;
+                       : deviceAddress.ToString();
         }
     }
 }

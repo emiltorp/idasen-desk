@@ -1,5 +1,5 @@
-﻿using System ;
-using Idasen.SystemTray.Interfaces ;
+﻿using Idasen.SystemTray.Interfaces;
+using System;
 
 namespace Idasen.SystemTray.Utils
 {
@@ -7,15 +7,15 @@ namespace Idasen.SystemTray.Utils
         : IStringToUIntConverter
     {
         public ulong ConvertToULong(string text,
-                                   ulong  defaultValue)
+                                   ulong defaultValue)
         {
             return !TryConvertToULong(text,
-                                     out var uintValue)
+                                     out ulong uintValue)
                        ? defaultValue
                        : uintValue;
         }
 
-        public bool TryConvertToULong(string   text,
+        public bool TryConvertToULong(string text,
                                      out ulong uintValue)
         {
             try

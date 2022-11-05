@@ -1,34 +1,34 @@
-﻿using System ;
-using Idasen.SystemTray.Interfaces ;
+﻿using Idasen.SystemTray.Interfaces;
+using System;
 
 namespace Idasen.SystemTray.Utils
 {
     public class DoubleToUIntConverter
         : IDoubleToUIntConverter
     {
-        public uint ConvertToUInt ( double value ,
-                                    uint   defaultValue )
+        public uint ConvertToUInt(double value,
+                                    uint defaultValue)
         {
-            return ! TryConvertToUInt ( value ,
-                                        out var uintValue )
+            return !TryConvertToUInt(value,
+                                        out uint uintValue)
                        ? defaultValue
-                       : uintValue ;
+                       : uintValue;
         }
 
-        public bool TryConvertToUInt ( double   value ,
-                                       out uint uintValue )
+        public bool TryConvertToUInt(double value,
+                                       out uint uintValue)
         {
             try
             {
-                uintValue = Convert.ToUInt32 ( value ) ;
+                uintValue = Convert.ToUInt32(value);
 
-                return true ;
+                return true;
             }
-            catch ( Exception )
+            catch (Exception)
             {
-                uintValue = 0 ;
+                uintValue = 0;
 
-                return false ;
+                return false;
             }
         }
     }
